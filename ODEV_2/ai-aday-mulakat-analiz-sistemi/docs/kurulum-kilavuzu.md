@@ -67,8 +67,10 @@ Import sonrasında özellikle şu node'lar tek tek kontrol edilmelidir:
 - Search Pozisyon Rubriği
 - Create Başvuru
 - OpenAI - Aday Analizi
+- Parse AI JSON
 - Create AI Analizi
 - Update Başvuru Durumu
+- Create AI Success Log
 - Send HR Mail
 - Update Mail Durumu
 - Create Mail Success Log
