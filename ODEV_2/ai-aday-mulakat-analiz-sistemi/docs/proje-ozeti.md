@@ -1,7 +1,3 @@
-
-docs/proje-ozeti.md
-
-```md
 # Proje Özeti
 
 Bu proje, aday başvurularını daha düzenli ve izlenebilir hale getirmek için hazırlanmış AI destekli bir ön değerlendirme sistemidir. Temel fikir, adaydan alınan bilgileri tek tek manuel incelemek yerine bu bilgileri kontrollü bir otomasyon akışıyla toplamak, kaydetmek, ön analizden geçirmek ve insan kaynakları tarafına okunabilir bir rapor olarak iletmektir.
