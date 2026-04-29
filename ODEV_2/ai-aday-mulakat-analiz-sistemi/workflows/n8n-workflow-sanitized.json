@@ -1,0 +1,969 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "formId": "REPLACE_WITH_TYPEFORM_FORM_ID"
+      },
+      "type": "n8n-nodes-base.typeformTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -448,
+        -80
+      ],
+      "id": "427610e6-cf37-4631-91e2-8c6b067715ad",
+      "name": "Typeform Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nfunction findValue(part) {\n  const entry = Object.entries(data).find(([key]) =>\n    key.toLocaleLowerCase(\"tr-TR\").includes(part.toLocaleLowerCase(\"tr-TR\"))\n  );\n  return entry ? entry[1] : \"\";\n}\n\nconst adSoyad = findValue(\"adınız ve soyadınız\");\nconst email = String(findValue(\"email adresiniz\")).trim().toLowerCase();\nconst telefon = findValue(\"telefon numaranız\");\n\nconst yas18Raw = findValue(\"18 yaşından büyük\");\nconst aiOnayRaw = findValue(\"başvuru bilgilerimin\");\n\nconst pozisyon = findValue(\"hangi pozisyona başvuruyorsunuz\");\nconst deneyimYili = Number(findValue(\"kaç yıllık deneyiminiz\")) || 0;\nconst egitim = findValue(\"eğitim bilginizi\");\nconst yabanciDil = findValue(\"yabancı dil\");\nconst teknikBeceriler = findValue(\"teknik becerilerinizi\");\nconst kendiniTanit = findValue(\"kendinizi kısaca\");\nconst uygunlukCevabi = findValue(\"neden bu pozisyona uygun\");\nconst beklenenMaas = findValue(\"beklenen maaş\");\nconst calismaTercihi = findValue(\"çalışma tercihiniz\");\nconst profilLinki = findValue(\"portfolio linkinizi\");\nconst cvLinki = findValue(\"cv dosyanızın erişilebilir\");\n\nconst yas18Text = String(yas18Raw).trim().toLocaleLowerCase(\"tr-TR\");\nconst aiOnayText = String(aiOnayRaw).trim().toLocaleLowerCase(\"tr-TR\");\n\nconst yas18 =\n  yas18Raw === true ||\n  yas18Text === \"evet\" ||\n  yas18Text === \"yes\" ||\n  yas18Text === \"true\";\n\nconst aiOnayi =\n  aiOnayRaw === true ||\n  aiOnayText === \"kabul ediyorum\" ||\n  aiOnayText === \"i accept\" ||\n  aiOnayText === \"accept\" ||\n  aiOnayText === \"accepted\" ||\n  aiOnayText === \"true\";\n\nconst emailGecerli = email.includes(\"@\") && email.includes(\".\");\n\nconst zorunluAlanlarDolu = Boolean(\n  adSoyad &&\n  emailGecerli &&\n  pozisyon &&\n  teknikBeceriler &&\n  kendiniTanit &&\n  uygunlukCevabi &&\n  cvLinki\n);\n\nconst gecerliBasvuru = Boolean(yas18 && aiOnayi && zorunluAlanlarDolu);\n\nreturn [\n  {\n    json: {\n      ad_soyad: adSoyad,\n      email,\n      telefon,\n      yas18,\n      ai_onayi: aiOnayi,\n      pozisyon,\n      deneyim_yili: deneyimYili,\n      egitim,\n      yabanci_dil: yabanciDil,\n      teknik_beceriler: teknikBeceriler,\n      kendini_tanit: kendiniTanit,\n      uygunluk_cevabi: uygunlukCevabi,\n      beklenen_maas: beklenenMaas,\n      calisma_tercihi: calismaTercihi,\n      profil_linki: profilLinki,\n      cv_linki: cvLinki,\n      basvuru_adi: `${adSoyad} - ${pozisyon}`,\n      gecerli_basvuru: gecerliBasvuru,\n      gecersiz_basvuru_nedeni: !yas18\n        ? \"18+ uygunluk sağlanmadı\"\n        : !aiOnayi\n        ? \"AI bilgilendirme onayı verilmedi\"\n        : !zorunluAlanlarDolu\n        ? \"Zorunlu alanlar eksik\"\n        : \"\",\n      raw_typeform_json: JSON.stringify(data)\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -80
+      ],
+      "id": "19b54546-388a-4e77-b932-f60270a058e6",
+      "name": "Normalize Typeform Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "261a756e-960b-4951-a27f-a51952dca8f1",
+              "leftValue": "={{ $json.gecerli_basvuru }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -32,
+        -80
+      ],
+      "id": "d9520739-b2fc-4010-b740-311801e6e619",
+      "name": "IF - Geçerli Başvuru mu?"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_NOTION_DATABASE_ID_SISTEM_LOGLARI_DB",
+          "mode": "list",
+          "cachedResultName": "Sistem Logları DB"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Log ID|title",
+              "title": "=INVALID - {{ $json.email }} - {{ $now }}"
+            },
+            {
+              "key": "Aday Email|email",
+              "emailValue": "={{ $json.email }}"
+            },
+            {
+              "key": "İşlem Türü|select",
+              "selectValue": "=Hata"
+            },
+            {
+              "key": "İşlem Durumu|select",
+              "selectValue": "=Atlandı"
+            },
+            {
+              "key": "Workflow Zamanı|date",
+              "date": "={{ $now }}",
+              "timezone": "Turkey"
+            },
+            {
+              "key": "n8n Node|rich_text",
+              "textContent": "IF - Geçerli Başvuru mu?"
+            },
+            {
+              "key": "AI Kararı|select",
+              "selectValue": "=Yok"
+            },
+            {
+              "key": "Mail Gönderildi mi?|checkbox"
+            },
+            {
+              "key": "Hata Mesajı|rich_text",
+              "textContent": "={{ $json.gecersiz_basvuru_nedeni }}"
+            },
+            {
+              "key": "Açıklama|rich_text",
+              "textContent": "Başvuru geçerli olmadığı için aday ve başvuru kaydı oluşturulmadı."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "85d0fc79-4138-437b-ad89-640214aebb8f",
+      "name": "Sistem Logları DB"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_NOTION_DATABASE_ID_ADAYLAR_DB",
+          "mode": "list",
+          "cachedResultName": "Adaylar DB"
+        },
+        "limit": 1,
+        "filterType": "json",
+        "filterJson": "={\n  \"property\": \"Email\",\n  \"email\": {\n    \"equals\": \"{{ $json.email }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        -256
+      ],
+      "id": "23b91e2f-13f9-4dac-8ed5-ac40403468ef",
+      "name": "Search Aday by Email",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f49405e5-5941-4846-8b0d-67717648390d",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        464,
+        -256
+      ],
+      "id": "c025b189-ba44-440d-ba73-b77aaf62ea2d",
+      "name": "IF - Duplicate Email mi?"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_NOTION_DATABASE_ID_SISTEM_LOGLARI_DB",
+          "mode": "list",
+          "cachedResultName": "Sistem Logları DB"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Log ID|title",
+              "title": "=DUPLICATE - {{ $('Normalize Typeform Data').item.json.email }} - {{ $now }}"
+            },
+            {
+              "key": "Aday Email|email",
+              "emailValue": "={{ $('Normalize Typeform Data').item.json.email }}"
+            },
+            {
+              "key": "İşlem Türü|select",
+              "selectValue": "=Duplicate Kontrol"
+            },
+            {
+              "key": "İşlem Durumu|select",
+              "selectValue": "=Atlandı"
+            },
+            {
+              "key": "Workflow Zamanı|date",
+              "date": "={{ $now }}"
+            },
+            {
+              "key": "n8n Node|rich_text",
+              "textContent": "IF - Duplicate Email mi?"
+            },
+            {
+              "key": "AI Kararı|select",
+              "selectValue": "=Yok"
+            },
+            {
+              "key": "Mail Gönderildi mi?|checkbox"
+            },
+            {
+              "key": "Hata Mesajı|rich_text",
+              "textContent": "Duplicate email"
+            },
+            {
+              "key": "Açıklama|rich_text",
+              "textContent": "Bu email ile daha önce aday kaydı bulundu. Yeni aday, başvuru ve AI analizi oluşturulmadı."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        752,
+        -384
+      ],
+      "id": "cb3d6beb-91eb-4dac-8a6b-50f46f1cf965",
+      "name": "Create Duplicate Log"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_NOTION_DATABASE_ID_ADAYLAR_DB",
+          "mode": "list",
+          "cachedResultName": "Adaylar DB"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Aday Adı|title",
+              "title": "={{ $('Normalize Typeform Data').item.json.ad_soyad }}"
+            },
+            {
+              "key": "Email|email",
+              "emailValue": "={{ $('Normalize Typeform Data').item.json.email }}"
+            },
+            {
+              "key": "Telefon|phone_number",
+              "phoneValue": "={{ $('Normalize Typeform Data').item.json.telefon }}"
+            },
+            {
+              "key": "18+ Uygunluk|select",
+              "selectValue": "=Evet"
+            },
+            {
+              "key": "Profil Linki|url",
+              "urlValue": "={{ $('Normalize Typeform Data').item.json.profil_linki }}"
+            },
+            {
+              "key": "AI Bilgilendirme Onayı|checkbox",
+              "checkboxValue": true
+            },
+            {
+              "key": "Aday Durumu|select",
+              "selectValue": "=Yeni"
+            },
+            {
+              "key": "İlk Başvuru Tarihi|date",
+              "date": "={{ $now }}"
+            },
+            {
+              "key": "Notlar|rich_text",
+              "textContent": "Typeform üzerinden alınan yeni aday kaydı."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        752,
+        -160
+      ],
+      "id": "2631c518-ebca-4d09-b263-b50fa62df465",
+      "name": "Create Aday"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_NOTION_DATABASE_ID_POZISYON_RUBRIKLERI_DB",
+          "mode": "list",
+          "cachedResultName": "Pozisyon Rubrikleri DB"
+        },
+        "limit": 1,
+        "filterType": "json",
+        "filterJson": "={\n  \"property\": \"Pozisyon Adı\",\n  \"title\": {\n    \"equals\": \"{{ $('Normalize Typeform Data').item.json.pozisyon }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        -160
+      ],
+      "id": "9cc62b8b-20dc-4558-b2a4-bf0a708f7b88",
+      "name": "Search Pozisyon Rubriği",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_NOTION_DATABASE_ID_BASVURULAR_DB",
+          "mode": "list",
+          "cachedResultName": "Başvurular DB"
+        },
+        "title": "={{ $('Normalize Typeform Data').item.json.basvuru_adi }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Başvuru Adı|title",
+              "title": "={{ $('Normalize Typeform Data').item.json.basvuru_adi }}"
+            },
+            {
+              "key": "Aday|relation",
+              "relationValue": [
+                "={{ $('Create Aday').item.json.id }}"
+              ]
+            },
+            {
+              "key": "Pozisyon|relation",
+              "relationValue": [
+                "={{ $('Search Pozisyon Rubriği').item.json.id }}"
+              ]
+            },
+            {
+              "key": "Deneyim Yılı|number",
+              "numberValue": "={{ $('Normalize Typeform Data').item.json.deneyim_yili }}"
+            },
+            {
+              "key": "Eğitim|rich_text",
+              "textContent": "={{ $('Normalize Typeform Data').item.json.egitim }}"
+            },
+            {
+              "key": "Yabancı Dil|rich_text",
+              "textContent": "={{ $('Normalize Typeform Data').item.json.yabanci_dil }}"
+            },
+            {
+              "key": "Teknik Beceriler|rich_text",
+              "textContent": "={{ $('Normalize Typeform Data').item.json.teknik_beceriler }}"
+            },
+            {
+              "key": "Ön Mülakat Cevabı|rich_text",
+              "textContent": "={{ $('Normalize Typeform Data').item.json.kendini_tanit }}"
+            },
+            {
+              "key": "Pozisyona Uygunluk Cevabı|rich_text",
+              "textContent": "={{ $('Normalize Typeform Data').item.json.uygunluk_cevabi }}"
+            },
+            {
+              "key": "Beklenen Maaş|rich_text",
+              "textContent": "={{ $('Normalize Typeform Data').item.json.beklenen_maas }}"
+            },
+            {
+              "key": "Çalışma Tercihi|select",
+              "selectValue": "={{ $('Normalize Typeform Data').item.json.calisma_tercihi }}"
+            },
+            {
+              "key": "CV Linki|url",
+              "urlValue": "={{ $('Normalize Typeform Data').item.json.cv_linki }}"
+            },
+            {
+              "key": "Başvuru Tarihi|date",
+              "date": "={{ $now }}"
+            },
+            {
+              "key": "Başvuru Durumu|select",
+              "selectValue": "=AI Analizi Bekliyor"
+            },
+            {
+              "key": "Son İnsan Kararı|select",
+              "selectValue": "=Beklemede"
+            },
+            {
+              "key": "HR Notu|rich_text"
+            },
+            {
+              "key": "Mail Durumu|select",
+              "selectValue": "=Gönderilmedi"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        -160
+      ],
+      "id": "4fb26a50-496f-41f5-93e4-7acc12539d04",
+      "name": "Create Başvuru"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_NOTION_DATABASE_ID",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Sen deneyimli bir insan kaynakları uzmanı ve teknik işe alım ön değerlendirme asistanısın.\n\nGörevin, adayın başvuru bilgilerini pozisyona özel rubriklere göre analiz etmektir.\n\nÇok önemli kurallar:\n- Nihai işe alım kararı verme.\n- Adayı kesin olarak işe alma, reddetme veya doğrudan mülakata çağırma kararı verme.\n- Sadece insan kaynakları ekibine yardımcı olacak ön değerlendirme önerisi üret.\n- Emin olmadığın durumlarda INSAN_KONTROLU kararını ver.\n- Yaş, cinsiyet, din, etnik köken, siyasi görüş, sağlık durumu, medeni durum gibi hassas özellikleri değerlendirmeye dahil etme.\n- 18+ bilgisi sadece yasal uygunluk kontrolüdür, teknik puana dahil edilmez.\n- Beklenen maaş teknik uygunluk puanına dahil edilmez.\n- CV linki varsa sadece ek referans olarak not et; CV içeriğini okumuş gibi davranma.\n- Adayın verdiği bilgiler yetersizse bunu risk_notu ve insan_kontrol_notu alanlarında belirt.\n- Adayın yalnızca verdiği bilgilere dayanarak analiz yap.\n- Cevabını sadece geçerli JSON olarak ver. Markdown, açıklama, kod bloğu veya JSON dışında herhangi bir metin kullanma.\n- JSON içindeki tüm alanları doldur. Boş şablon döndürme.\n- JSON içindeki hiçbir alan boş string, boş array veya null olmamalıdır.\n- Belirgin risk yoksa risk_notu alanına \"Belirgin risk tespit edilmedi.\" yaz.\n- Belirgin zayıf yön yoksa zayif_yonler alanına [\"Belirgin zayıf yön tespit edilmedi.\"] yaz.\n- İnsan kontrolü için özel bir uyarı yoksa insan_kontrol_notu alanına \"AI önerisi insan kaynakları uzmanı tarafından son kez kontrol edilmelidir.\" yaz.\n- Bias açısından sorun yoksa bias_kontrol_notu alanına \"Değerlendirme teknik beceri ve pozisyon uygunluğu üzerinden yapılmıştır; hassas özellikler dikkate alınmamıştır.\" yaz.\n\nKarar seçenekleri:\n- KESIN_RED: Aday minimum teknik gereklilikleri açıkça karşılamıyorsa ve bilgiler pozisyona ciddi şekilde uyumsuzsa. Bu nihai red değil, AI ön eleme red önerisidir.\n- INSAN_KONTROLU: Aday kısmen uygun, bilgiler yetersiz, belirsiz veya insan değerlendirmesi gerekiyorsa.\n- MULAKAT_ONER: Aday pozisyon kriterlerine güçlü şekilde uygunsa ve insan kaynakları ekibine mülakat için önerilebilirse.\n\nPuanlama:\n- ai_puani: 0-100 arası teknik ve pozisyona uygunluk puanı.\n- ai_guven_skoru: 0-100 arası, verdiğin değerlendirmenin güven skoru.\n- Eğer aday bilgileri yetersizse ai_guven_skoru düşük olmalıdır.\n\nAday bilgileri:\n\nAd Soyad:\n{{ $('Normalize Typeform Data').item.json.ad_soyad }}\n\nEmail:\n{{ $('Normalize Typeform Data').item.json.email }}\n\nPozisyon:\n{{ $('Normalize Typeform Data').item.json.pozisyon }}\n\nDeneyim Yılı:\n{{ $('Normalize Typeform Data').item.json.deneyim_yili }}\n\nEğitim:\n{{ $('Normalize Typeform Data').item.json.egitim }}\n\nYabancı Dil:\n{{ $('Normalize Typeform Data').item.json.yabanci_dil }}\n\nTeknik Beceriler:\n{{ $('Normalize Typeform Data').item.json.teknik_beceriler }}\n\nÖn Mülakat Cevabı:\n{{ $('Normalize Typeform Data').item.json.kendini_tanit }}\n\nPozisyona Uygunluk Cevabı:\n{{ $('Normalize Typeform Data').item.json.uygunluk_cevabi }}\n\nÇalışma Tercihi:\n{{ $('Normalize Typeform Data').item.json.calisma_tercihi }}\n\nCV Linki:\n{{ $('Normalize Typeform Data').item.json.cv_linki }}\n\nPozisyon rubriği:\n\nPozisyon Adı:\n{{ $('Search Pozisyon Rubriği').item.json.name }}\n\nMinimum Deneyim:\n{{ $('Search Pozisyon Rubriği').item.json.property_minimum_deneyim }}\n\nKritik Beceriler:\n{{ $('Search Pozisyon Rubriği').item.json.property_kritik_beceriler }}\n\nDeğerlendirme Kriterleri:\n{{ $('Search Pozisyon Rubriği').item.json.property_de_erlendirme_kriterleri }}\n\nMülakat Soru Havuzu:\n{{ $('Search Pozisyon Rubriği').item.json.property_m_lakat_soru_havuzu }}\n\nPrompt Rubriği:\n{{ $('Search Pozisyon Rubriği').item.json.property_prompt_rubri_i }}\n\nAnaliz yaparken özellikle şunlara dikkat et:\n- Adayın deneyim yılı, pozisyonun minimum deneyim beklentisiyle uyumlu mu?\n- Teknik beceriler, pozisyonun kritik becerileriyle örtüşüyor mu?\n- Adayın kendini tanıtma ve pozisyona uygunluk cevabı somut mu?\n- Adayın verdiği bilgiler yüzeysel mi, yoksa proje/teknoloji/deneyim içeriyor mu?\n- Mülakat soruları pozisyona ve adayın eksik/güçlü yönlerine özel olmalı.\n\nAşağıdaki JSON formatında cevap ver:\n\n{\n  \"ai_puani\": 0,\n  \"ai_guven_skoru\": 0,\n  \"karar\": \"INSAN_KONTROLU\",\n  \"karar_gerekcesi\": \"\",\n  \"guclu_yonler\": [],\n  \"zayif_yonler\": [],\n  \"risk_notu\": \"\",\n  \"pozisyona_ozel_degerlendirme\": \"\",\n  \"insan_kontrol_notu\": \"\",\n  \"bias_kontrol_notu\": \"\",\n  \"mulakat_sorulari\": [],\n  \"kisa_ozet\": \"\"\n}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        1184,
+        -160
+      ],
+      "id": "fd480fbd-569c-4041-a972-fc95857f51d8",
+      "name": "OpenAI - Aday Analizi"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst raw =\n  input.output?.[0]?.content?.[0]?.text ||\n  input.content?.[0]?.text ||\n  input.message?.content ||\n  input.message ||\n  input.text ||\n  input.response ||\n  input.content ||\n  \"\";\n\nlet cleaned = String(raw)\n  .replace(/```json/g, \"\")\n  .replace(/```/g, \"\")\n  .trim();\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (error) {\n  parsed = {\n    ai_puani: 0,\n    ai_guven_skoru: 0,\n    karar: \"INSAN_KONTROLU\",\n    karar_gerekcesi: \"AI çıktısı JSON formatında parse edilemedi. İnsan kontrolü önerildi.\",\n    guclu_yonler: [],\n    zayif_yonler: [\"AI çıktısı teknik olarak işlenemedi.\"],\n    risk_notu: \"JSON parse hatası: \" + error.message,\n    pozisyona_ozel_degerlendirme: \"\",\n    insan_kontrol_notu: \"AI yanıtı işlenemediği için başvuru insan kontrolüne alınmalıdır.\",\n    bias_kontrol_notu: \"Parse hatası nedeniyle bias kontrolü yapılamadı.\",\n    mulakat_sorulari: [],\n    kisa_ozet: \"AI analizi teknik hata nedeniyle tamamlanamadı.\"\n  };\n}\n\nfunction arrToText(value, fallback) {\n  if (Array.isArray(value)) {\n    const cleanedArray = value.filter(Boolean);\n    return cleanedArray.length ? cleanedArray.join(\"\\n\") : fallback;\n  }\n  if (value === null || value === undefined || String(value).trim() === \"\") {\n    return fallback;\n  }\n  return String(value);\n}\n\nconst kararlar = [\"KESIN_RED\", \"INSAN_KONTROLU\", \"MULAKAT_ONER\"];\nconst karar = kararlar.includes(parsed.karar) ? parsed.karar : \"INSAN_KONTROLU\";\n\nconst basvuruDurumuMap = {\n  KESIN_RED: \"AI Reddetti\",\n  INSAN_KONTROLU: \"İnsan Kontrolü Gerekli\",\n  MULAKAT_ONER: \"Mülakat Önerildi\"\n};\n\nreturn [\n  {\n    json: {\n      ai_puani: Number(parsed.ai_puani) || 0,\n      ai_guven_skoru: Number(parsed.ai_guven_skoru) || 0,\n      karar,\n      basvuru_durumu: basvuruDurumuMap[karar] || \"İnsan Kontrolü Gerekli\",\n\n      karar_gerekcesi:\n        parsed.karar_gerekcesi ||\n        \"Karar gerekçesi üretilemedi. İnsan kontrolü önerilir.\",\n\n      guclu_yonler: arrToText(\n        parsed.guclu_yonler,\n        \"Güçlü yön bilgisi üretilemedi.\"\n      ),\n\n      zayif_yonler: arrToText(\n        parsed.zayif_yonler,\n        \"Belirgin zayıf yön tespit edilmedi.\"\n      ),\n\n      risk_notu:\n        parsed.risk_notu ||\n        \"Belirgin risk tespit edilmedi.\",\n\n      pozisyona_ozel_degerlendirme:\n        parsed.pozisyona_ozel_degerlendirme ||\n        \"Pozisyona özel değerlendirme üretilemedi.\",\n\n      insan_kontrol_notu:\n        parsed.insan_kontrol_notu ||\n        \"AI önerisi insan kaynakları uzmanı tarafından son kez kontrol edilmelidir.\",\n\n      bias_kontrol_notu:\n        parsed.bias_kontrol_notu ||\n        \"Değerlendirme teknik beceri ve pozisyon uygunluğu üzerinden yapılmıştır; hassas özellikler dikkate alınmamıştır.\",\n\n      mulakat_sorulari: arrToText(\n        parsed.mulakat_sorulari,\n        \"Mülakat sorusu üretilemedi.\"\n      ),\n\n      kisa_ozet:\n        parsed.kisa_ozet ||\n        \"Kısa özet üretilemedi.\",\n\n      raw_json: JSON.stringify(parsed)\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        -160
+      ],
+      "id": "220bda06-91d7-4121-895f-17cf28915da6",
+      "name": "Parse AI JSON"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_NOTION_DATABASE_ID_AI_ANALIZLERI_DB",
+          "mode": "list",
+          "cachedResultName": "AI Analizleri DB"
+        },
+        "title": "=AI - {{ $('Normalize Typeform Data').item.json.ad_soyad }} - {{ $('Normalize Typeform Data').item.json.pozisyon }} - {{ $now }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Başvuru|relation",
+              "relationValue": [
+                "={{ $('Create Başvuru').item.json.id }}"
+              ]
+            },
+            {
+              "key": "AI Puanı|number",
+              "numberValue": "={{ $json.ai_puani }}"
+            },
+            {
+              "key": "AI Güven Skoru|number",
+              "numberValue": "={{ $json.ai_guven_skoru }}"
+            },
+            {
+              "key": "AI Kararı|select",
+              "selectValue": "={{ $json.karar }}"
+            },
+            {
+              "key": "Karar Gerekçesi|rich_text",
+              "textContent": "={{ $json.karar_gerekcesi }}"
+            },
+            {
+              "key": "Güçlü Yönler|rich_text",
+              "textContent": "={{ $json.guclu_yonler }}"
+            },
+            {
+              "key": "Zayıf Yönler|rich_text",
+              "textContent": "={{ $json.zayif_yonler }}"
+            },
+            {
+              "key": "Risk Notu|rich_text",
+              "textContent": "={{ $json.risk_notu }}"
+            },
+            {
+              "key": "Pozisyona Özel Teknik Değerlendirme|rich_text",
+              "textContent": "={{ $json.pozisyona_ozel_degerlendirme }}"
+            },
+            {
+              "key": "İnsan Kontrol Notu|rich_text",
+              "textContent": "={{ $json.insan_kontrol_notu }}"
+            },
+            {
+              "key": "Bias Kontrol Notu|rich_text",
+              "textContent": "={{ $json.bias_kontrol_notu }}"
+            },
+            {
+              "key": "Mülakat Soruları|rich_text",
+              "textContent": "={{ $json.mulakat_sorulari }}"
+            },
+            {
+              "key": "Kısa Özet|rich_text",
+              "textContent": "={{ $json.kisa_ozet }}"
+            },
+            {
+              "key": "Raw JSON|rich_text",
+              "textContent": "={{ $json.raw_json }}"
+            },
+            {
+              "key": "Model|rich_text",
+              "textContent": "gpt-4o-mini"
+            },
+            {
+              "key": "Prompt Versiyonu|rich_text",
+              "textContent": "v1.0"
+            },
+            {
+              "key": "Analiz Tarihi|date",
+              "date": "={{ $now }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        1600,
+        -160
+      ],
+      "id": "53ee438c-73ca-43cd-9b8a-6f8467af23dc",
+      "name": "Create AI Analizi"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Create Başvuru').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Başvuru Durumu|select",
+              "selectValue": "={{ $('Parse AI JSON').item.json.basvuru_durumu }}"
+            },
+            {
+              "key": "HR Notu|rich_text",
+              "textContent": "={{ $('Parse AI JSON').item.json.kisa_ozet }}"
+            },
+            {
+              "key": "Mail Durumu|select",
+              "selectValue": "Gönderilmedi"
+            },
+            {
+              "key": "Son İnsan Kararı|select",
+              "selectValue": "Beklemede"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        1744,
+        -160
+      ],
+      "id": "11a1a8f7-88d4-438a-b32b-ff2b214e1024",
+      "name": "Update Başvuru Durumu"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_NOTION_DATABASE_ID_SISTEM_LOGLARI_DB",
+          "mode": "list",
+          "cachedResultName": "Sistem Logları DB"
+        },
+        "title": "={{ \"AI ANALIZ - \" + $(\"Normalize Typeform Data\").item.json.email + \" - \" + $now }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Aday Email|email",
+              "emailValue": "={{ $(\"Normalize Typeform Data\").item.json.email }}"
+            },
+            {
+              "key": "İşlem Türü|select",
+              "selectValue": "AI Sonucu Yazıldı"
+            },
+            {
+              "key": "İşlem Durumu|select",
+              "selectValue": "Başarılı"
+            },
+            {
+              "key": "AI Kararı|select",
+              "selectValue": "={{ $('Parse AI JSON').item.json.karar }}"
+            },
+            {
+              "key": "Başvuru|relation",
+              "relationValue": [
+                "={{ $('Create Başvuru').item.json.id }}"
+              ]
+            },
+            {
+              "key": "n8n Node|rich_text",
+              "textContent": "Update Başvuru Durumu"
+            },
+            {
+              "key": "Açıklama|rich_text",
+              "textContent": "={{ \"AI analizi tamamlandı. Başvuru durumu \" + $(\"Parse AI JSON\").item.json.basvuru_durumu + \" olarak güncellendi.\" }}"
+            },
+            {
+              "key": "Workflow Zamanı|date",
+              "date": "={{ $now }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        1888,
+        -160
+      ],
+      "id": "5f2aa02e-f120-4777-a244-7dd5913cc100",
+      "name": "Create AI Success Log"
+    },
+    {
+      "parameters": {
+        "sendTo": "REPLACE_WITH_HR_EMAIL",
+        "subject": "=Yeni Aday AI Analizi: {{ $('Normalize Typeform Data').item.json.ad_soyad }} - {{ $('Normalize Typeform Data').item.json.pozisyon }} - {{ $('Parse AI JSON').item.json.karar }}",
+        "emailType": "text",
+        "message": "=Yeni aday başvurusu AI destekli ön değerlendirmeden geçti.\n\nAday Bilgileri\n-------------------------\nAd Soyad: {{ $('Normalize Typeform Data').item.json.ad_soyad }}\nEmail: {{ $('Normalize Typeform Data').item.json.email }}\nTelefon: {{ $('Normalize Typeform Data').item.json.telefon }}\nPozisyon: {{ $('Normalize Typeform Data').item.json.pozisyon }}\nDeneyim Yılı: {{ $('Normalize Typeform Data').item.json.deneyim_yili }}\nÇalışma Tercihi: {{ $('Normalize Typeform Data').item.json.calisma_tercihi }}\nCV Linki: {{ $('Normalize Typeform Data').item.json.cv_linki }}\nProfil Linki: {{ $('Normalize Typeform Data').item.json.profil_linki }}\n\nAI Ön Değerlendirme Sonucu\n-------------------------\nAI Kararı: {{ $('Parse AI JSON').item.json.karar }}\nBaşvuru Durumu: {{ $('Parse AI JSON').item.json.basvuru_durumu }}\nAI Puanı: {{ $('Parse AI JSON').item.json.ai_puani }}\nAI Güven Skoru: {{ $('Parse AI JSON').item.json.ai_guven_skoru }}\n\nKısa Özet\n-------------------------\n{{ $('Parse AI JSON').item.json.kisa_ozet }}\n\nKarar Gerekçesi\n-------------------------\n{{ $('Parse AI JSON').item.json.karar_gerekcesi }}\n\nGüçlü Yönler\n-------------------------\n{{ $('Parse AI JSON').item.json.guclu_yonler }}\n\nZayıf Yönler\n-------------------------\n{{ $('Parse AI JSON').item.json.zayif_yonler }}\n\nRisk Notu\n-------------------------\n{{ $('Parse AI JSON').item.json.risk_notu }}\n\nPozisyona Özel Teknik Değerlendirme\n-------------------------\n{{ $('Parse AI JSON').item.json.pozisyona_ozel_degerlendirme }}\n\nMülakat Soruları\n-------------------------\n{{ $('Parse AI JSON').item.json.mulakat_sorulari }}\n\nİnsan Kontrol Notu\n-------------------------\n{{ $('Parse AI JSON').item.json.insan_kontrol_notu }}\n\nNotion Kayıtları\n-------------------------\nBaşvuru Kaydı: {{ $('Create Başvuru').item.json.url }}\nAI Analiz Kaydı: {{ $('Create AI Analizi').item.json.url }}\n\nÖnemli Not\n-------------------------\nBu sonuç nihai işe alım kararı değildir. AI çıktısı yalnızca ön değerlendirme amacıyla üretilmiştir. Nihai karar insan kaynakları yetkilisi tarafından verilmelidir.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2032,
+        -160
+      ],
+      "id": "f6e2cd3b-a175-4cde-8530-7b59cfad59d6",
+      "name": "Send HR Mail"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Create Başvuru').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Mail Durumu|select",
+              "selectValue": "HR’a Rapor Gönderildi"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2192,
+        -160
+      ],
+      "id": "6bc74184-1777-4dfa-b2c1-d5dc92c21123",
+      "name": "Update Mail Durumu"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_NOTION_DATABASE_ID_SISTEM_LOGLARI_DB",
+          "mode": "list",
+          "cachedResultName": "Sistem Logları DB"
+        },
+        "title": "=MAIL - {{ $('Normalize Typeform Data').item.json.email }} - {{ $now }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Aday Email|email",
+              "emailValue": "={{ $('Normalize Typeform Data').item.json.email }}"
+            },
+            {
+              "key": "İşlem Türü|select",
+              "selectValue": "Mail Gönderildi"
+            },
+            {
+              "key": "İşlem Durumu|select",
+              "selectValue": "Başarılı"
+            },
+            {
+              "key": "AI Kararı|select",
+              "selectValue": "={{ $('Parse AI JSON').item.json.karar }}"
+            },
+            {
+              "key": "Başvuru|relation",
+              "relationValue": [
+                "={{ $('Create Başvuru').item.json.id }}"
+              ]
+            },
+            {
+              "key": "Mail Gönderildi mi?|checkbox",
+              "checkboxValue": true
+            },
+            {
+              "key": "n8n Node|rich_text",
+              "textContent": "Send HR Mail"
+            },
+            {
+              "key": "Açıklama|rich_text",
+              "textContent": "HR bilgilendirme maili REPLACE_WITH_HR_EMAIL adresine gönderildi."
+            },
+            {
+              "key": "Workflow Zamanı|date",
+              "date": "={{ $now }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2352,
+        -160
+      ],
+      "id": "f5cc75e8-57e4-486a-b62e-f884f18933d5",
+      "name": "Create Mail Success Log"
+    }
+  ],
+  "connections": {
+    "Typeform Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Typeform Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Typeform Data": {
+      "main": [
+        [
+          {
+            "node": "IF - Geçerli Başvuru mu?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Geçerli Başvuru mu?": {
+      "main": [
+        [
+          {
+            "node": "Search Aday by Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sistem Logları DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Aday by Email": {
+      "main": [
+        [
+          {
+            "node": "IF - Duplicate Email mi?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Duplicate Email mi?": {
+      "main": [
+        [
+          {
+            "node": "Create Duplicate Log",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Aday",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Duplicate Log": {
+      "main": [
+        []
+      ]
+    },
+    "Create Aday": {
+      "main": [
+        [
+          {
+            "node": "Search Pozisyon Rubriği",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Pozisyon Rubriği": {
+      "main": [
+        [
+          {
+            "node": "Create Başvuru",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Başvuru": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Aday Analizi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Aday Analizi": {
+      "main": [
+        [
+          {
+            "node": "Parse AI JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI JSON": {
+      "main": [
+        [
+          {
+            "node": "Create AI Analizi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create AI Analizi": {
+      "main": [
+        [
+          {
+            "node": "Update Başvuru Durumu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Başvuru Durumu": {
+      "main": [
+        [
+          {
+            "node": "Create AI Success Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create AI Success Log": {
+      "main": [
+        [
+          {
+            "node": "Send HR Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send HR Mail": {
+      "main": [
+        [
+          {
+            "node": "Update Mail Durumu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Mail Durumu": {
+      "main": [
+        [
+          {
+            "node": "Create Mail Success Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Mail Success Log": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "sanitized": true,
+    "note": "Credentials, webhook IDs, external database IDs, instance ID, Notion URLs, Typeform form ID and HR email were replaced for public GitHub sharing."
+  }
+}
