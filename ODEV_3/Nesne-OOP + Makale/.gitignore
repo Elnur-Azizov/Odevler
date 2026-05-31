@@ -1,0 +1,12 @@
+/out/
+/build/
+/.cmake/
+CMakeCache.txt
+CMakeFiles/
+*.obj
+*.pdb
+*.exe
+*.user
+.vs/
+/reports/
+~$*.docx
